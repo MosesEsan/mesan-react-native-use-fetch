@@ -163,17 +163,17 @@ export default function useFetch({
 
   // === CRUD / Mutations
   // 3. Add New Data
-  const addNewData = newData => {
-    setData(prevData => [newData, ...prevData]);
+  const addNewData = (newData: any): void => {
+    setData((prevData: any[]) => [newData, ...prevData]);
     console.log('New Data Added:', newData);
   };
 
   // 4. Update Existing Data
-  const updateExistingData = (id, newData) => {
+  const updateExistingData = (id: any, newData: Record<string, any>): void => {
     // Find the index by ID
-    const index = data.findIndex(obj => obj.id === id);
+    const index: number = data.findIndex((obj: any) => obj.id === id);
     if (index !== -1) {
-      const updatedClone = [...data]; // Create a shallow copy
+      const updatedClone: any[] = [...data]; // Create a shallow copy
       updatedClone[index] = {...updatedClone[index], ...newData};
       setData(updatedClone); // Update state immutably
     }
@@ -184,7 +184,7 @@ export default function useFetch({
     matchId: any,
     keyToUpdate: string,
     newValue: any,
-    matchKey?: string = 'id',
+    matchKey: string = 'id',
   ): void => {
     console.log('🔧 Updating data with params:', {
       matchKey,
@@ -204,8 +204,8 @@ export default function useFetch({
   };
 
   // 6. Delete Data
-  const deleteExistingData = id => {
-    setData(prevData => prevData.filter(obj => obj.id !== id));
+  const deleteExistingData = (id: any): void => {
+    setData((prevData: any[]) => prevData.filter((obj: any) => obj.id !== id));
     console.log('Deleted Item with ID:', id);
   };
 
