@@ -32,19 +32,21 @@ yarn add react-native-use-fetch
 
 ## **Usage**
 
-### **Basic Example**
+The `useFetch` hook returns an array with three items: `state`, `queries`, and `mutations`. Use these to manage data fetching, query actions, and data mutations respectively.
+
+### **Example**
 
 ```javascript
-import React, {useEffect} from 'react';
-import {View, Text, Button, FlatList, ActivityIndicator} from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, Button, FlatList, ActivityIndicator } from 'react-native';
 import useFetch from 'react-native-use-fetch';
 
-const fetchUsers = async ({page}) => {
+const fetchUsers = async ({ page }) => {
   const response = await fetch(`https://api.example.com/users?page=${page}`);
   return response.json();
 };
 
-const extractUserData = response => ({
+const extractUserData = (response) => ({
   data: response.users,
   totalResults: response.total,
   currentPage: response.page,
@@ -52,49 +54,46 @@ const extractUserData = response => ({
 });
 
 const UsersScreen = () => {
-  const [state, actions, mutations] = useFetch({
+  const [state, queries, mutations] = useFetch({
     serviceFn: fetchUsers,
     dataExtractor: extractUserData,
   });
 
   useEffect(() => {
-    actions.fetchData();
+    queries.fetchData();
   }, []);
 
   const handleAddUser = () => {
-    const newUser = {id: Date.now(), name: 'New User'};
+    const newUser = { id: Date.now(), name: 'New User' };
     mutations.addNewData(newUser);
   };
 
   const handleUpdateUser = (id) => {
-    mutations.updateExistingData(id, {name: 'Updated User'});
+    mutations.updateExistingData(id, { name: 'Updated User' });
   };
 
   return (
-    <View style={{flex: 1, padding: 16}}>
+    <View style={{ flex: 1, padding: 16 }}>
       <Button title="Add User" onPress={handleAddUser} />
       {state.isFetching && <ActivityIndicator size="large" />}
       <FlatList
         data={state.data}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({item}) => (
-          <View style={{marginBottom: 10}}>
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={{ marginBottom: 10 }}>
             <Text>{item.name}</Text>
-            <Button
-              title="Update"
-              onPress={() => handleUpdateUser(item.id)}
-            />
+            <Button title="Update" onPress={() => handleUpdateUser(item.id)} />
             <Button
               title="Delete"
               onPress={() => mutations.deleteExistingData(item.id)}
             />
           </View>
         )}
-        onEndReached={actions.fetchNextPage}
-        onRefresh={actions.refetchData}
+        onEndReached={queries.fetchNextPage}
+        onRefresh={queries.refetchData}
         refreshing={state.isRefreshing}
       />
-      {state.error && <Text style={{color: 'red'}}>Error: {state.error}</Text>}
+      {state.error && <Text style={{ color: 'red' }}>Error: {state.error}</Text>}
     </View>
   );
 };
@@ -102,11 +101,9 @@ const UsersScreen = () => {
 export default UsersScreen;
 ```
 
----
-
 ## **Hook API**
 
-### **`useFetch(options?: FetchProps): [FetchState, FetchActions, MutationActions]`**
+### **`useFetch(options?: FetchProps): [FetchStateWithSetters, QueryActions, MutationActions]`**
 
 This hook manages API data fetching, pagination, refreshing, error handling, and data mutations.
 
@@ -121,62 +118,65 @@ This hook manages API data fetching, pagination, refreshing, error handling, and
 
 #### **Returned Values:**
 
-- `state` (object):
+- `state` (object): Includes both state values and setter functions.
+  - State:
+    - `data` (array)
+    - `error` (string or `null`)
+    - `page` (number)
+    - `hasNextPage` (boolean)
+    - `totalResults` (number or `null`)
+    - `isFetching` (boolean)
+    - `isRefreshing` (boolean)
+    - `isFetchingMore` (boolean)
+  - Setters:
+    - `setData(data: any[])`
+    - `setError(error: string | null)`
+    - `setPage(page: number)`
+    - `setHasNextPage(boolean)`
+    - `setTotalResults(number | null)`
+    - `setIsFetching(boolean)`
+    - `setIsRefreshing(boolean)`
+    - `setIsFetchingMore(boolean)`
 
-  - `data` (array): Fetched data.
-  - `error` (string or `null`): Error message if an error occurs.
-  - `page` (number): Current page number.
-  - `hasNextPage` (boolean): Indicates if more pages are available.
-  - `totalResults` (number or `null`): Total number of results (if available).
-  - `isFetching` (boolean): Indicates if initial fetch is in progress.
-  - `isRefreshing` (boolean): Indicates if data is being refreshed.
-  - `isFetchingMore` (boolean): Indicates if additional pages are being fetched.
-
-- `actions` (object):
-  - `setData(data: any[])`: Set the main data array.
-  - `setError(error: string | null)`: Set error state.
-  - `setPage(page: number)`: Update current page.
-  - `setHasNextPage(boolean)`: Update next page availability.
-  - `setTotalResults(number | null)`: Set total result count.
-  - `setIsFetching(boolean)`: Toggle isFetching state.
-  - `setIsRefreshing(boolean)`: Toggle isRefreshing state.
-  - `setIsFetchingMore(boolean)`: Toggle isFetchingMore state.
-  - `fetchData(refresh?: boolean, page?: number, more?: boolean)`: Main fetch function.
-  - `refetchData()`: Refresh the current dataset.
-  - `fetchNextPage()`: Fetch the next page if available.
+- `queries` (object):
+  - `fetchData(refresh?: boolean, page?: number, more?: boolean)`
+  - `refetchData()`
+  - `fetchNextPage()`
 
 - `mutations` (object):
-  - `addNewData(newData)`: Adds a new data item to the top of the list.
-  - `updateExistingData(id, newData)`: Updates an item in the data array based on its `id`.
-  - `updateExistingDataWithKey(matchId, keyToUpdate, newValue, matchKey?)`: Updates a specific key in an item matched by `matchId`. Defaults to matching by `'id'`.
-  - `deleteExistingData(id)`: Removes an item from the data array by `id`.
+  - `addNewData(newData)`
+  - `updateExistingData(id, newData)`
+  - `updateExistingDataWithKey(matchId, keyToUpdate, newValue, matchKey?)`
+  - `deleteExistingData(id)`
 
 ---
 
 ## **How it Works**
 
-1. The hook uses a provided `serviceFn` to fetch data from an API.
-2. The `dataExtractor` function processes the response and extracts relevant fields, including pagination metadata.
-3. State management handles error handling, loading states, and pagination control, ensuring smooth user experience.
-4. Supports infinite scrolling, manual refreshing, and data mutations like add, update, and delete.
+1. On mount, the hook optionally fetches data from an API using a user-provided `serviceFn`.
+2. The `dataExtractor` processes and structures the API response, including pagination.
+3. Fetch state is split between querying (`fetchData`, `refetchData`, `fetchNextPage`) and mutation (`addNewData`, `updateExistingData`, etc.) actions.
+4. Built-in setters (e.g., `setData`, `setError`, etc.) allow manual control over hook state.
+5. Mutation methods offer convenient, immutable updates to the data array.
+6. Pagination and infinite scroll are supported automatically using `hasNextPage` and page tracking.
 
 ---
 
 ## **Contributing**
 
-We welcome contributions! Feel free to submit issues or pull requests on the [GitHub repository](https://github.com/your-repo-url).
+Contributions are welcome! If you have improvements, bug fixes, or ideas, feel free to fork the repo and submit a pull request. Be sure to include tests and follow the coding style used throughout the project. Discuss features or bugs via [GitHub Issues](https://github.com/your-repo-url/issues).
 
 ---
 
 ## **Issues and Support**
 
-If you encounter any issues or need help, please create an issue on the [GitHub repository](https://github.com/your-repo-url/issues).
+Need help or found a bug? Open an issue on the [GitHub Issues page](https://github.com/your-repo-url/issues). We're happy to help!
 
 ---
 
 ## **License**
 
-MIT License. See the [LICENSE](./LICENSE) file for more information.
+Licensed under the MIT License. See the [LICENSE](./LICENSE) file for full details.
 
 ---
 
