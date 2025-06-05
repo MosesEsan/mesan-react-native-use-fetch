@@ -1,6 +1,6 @@
 {
   "name": "react-native-use-fetch",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A lightweight and flexible React Native hook for managing API data fetching with pagination, error handling, refreshing, and data mutation capabilities.",
   "main": "index.js",
   "repository": {
