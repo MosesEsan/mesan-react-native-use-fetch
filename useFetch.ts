@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 
 // INTERFACES
 export interface FetchState {
@@ -30,6 +30,38 @@ export interface FetchActions {
   fetchNextPage: () => Promise<void>;
 }
 
+export interface FetchStateWithSetters {
+  // state
+  data: any[];
+  error: string | null;
+  page: number;
+  hasNextPage: boolean;
+  totalResults: number | null;
+  isFetching: boolean;
+  isRefreshing: boolean;
+  isFetchingMore: boolean;
+
+  // setters
+  setData: (data: any[]) => void;
+  setError: (error: string | null) => void;
+  setPage: (page: number) => void;
+  setHasNextPage: (hasNextPage: boolean) => void;
+  setTotalResults: (totalResults: number | null) => void;
+  setIsFetching: (isFetching: boolean) => void;
+  setIsRefreshing: (isRefreshing: boolean) => void;
+  setIsFetchingMore: (isFetchingMore: boolean) => void;
+}
+
+export interface QueryActions {
+  fetchData: (
+    refresh?: boolean,
+    page?: number,
+    more?: boolean,
+  ) => Promise<void>;
+  refetchData: () => Promise<void>;
+  fetchNextPage: () => Promise<void>;
+}
+
 export interface MutationActions {
   addNewData: (newData: any) => void;
   updateExistingData: (id: any, newData: any) => void;
@@ -46,7 +78,7 @@ export interface ServiceResponse {
   [key: string]: any;
 }
 
-type ServiceFunction = (params: {page: number}) => Promise<ServiceResponse>;
+type ServiceFunction = (params: { page: number }) => Promise<ServiceResponse>;
 
 export interface GetDataParams {
   page: number;
@@ -75,7 +107,7 @@ export default function useFetch({
   dataExtractor,
   onError,
   shouldFetch = true,
-}: FetchProps = {}): [FetchState, FetchActions, MutationActions] {
+}: FetchProps = {}): [FetchStateWithSetters, QueryActions, MutationActions] {
   // STATE VARIABLES
   const [data, setData] = useState<any[]>(initialData);
   const [page, setPage] = useState<number>(1);
@@ -96,8 +128,10 @@ export default function useFetch({
     else fetchData();
   }, []);
 
-  const _setData = (newData: any[]) => {
-    setData(newData);
+  const _setData = (incoming: any[] | ((prev: any[]) => any[])) => {
+    setData(prev =>
+      typeof incoming === 'function' ? incoming(prev) : incoming,
+    );
     setIsFetching(false);
     setIsRefreshing(false);
     setIsFetchingMore(false);
@@ -118,7 +152,7 @@ export default function useFetch({
 
     if (refresh) setIsRefreshing(true);
     try {
-      const response = await serviceFn({page});
+      const response = await serviceFn({ page });
       _setExtractedData(response);
       setPage(page);
     } catch (err: any) {
@@ -155,7 +189,7 @@ export default function useFetch({
 
   // 2. Fetch Next Page
   async function fetchNextPage() {
-    if (hasNextPage) {
+    if (hasNextPage && !isFetchingMore && !isFetching) {
       setIsFetchingMore(true);
       await fetchData(false, page + 1, true);
     }
@@ -164,8 +198,7 @@ export default function useFetch({
   // === CRUD / Mutations
   // 3. Add New Data
   const addNewData = (newData: any): void => {
-    setData((prevData: any[]) => [newData, ...prevData]);
-    console.log('New Data Added:', newData);
+    _setData((prevData: any[]) => [newData, ...prevData]);
   };
 
   // 4. Update Existing Data
@@ -174,7 +207,7 @@ export default function useFetch({
     const index: number = data.findIndex((obj: any) => obj.id === id);
     if (index !== -1) {
       const updatedClone: any[] = [...data]; // Create a shallow copy
-      updatedClone[index] = {...updatedClone[index], ...newData};
+      updatedClone[index] = { ...updatedClone[index], ...newData };
       setData(updatedClone); // Update state immutably
     }
   };
@@ -195,7 +228,7 @@ export default function useFetch({
 
     setData(prevData => {
       const updatedData = prevData.map(obj =>
-        obj[matchKey] === matchId ? {...obj, [keyToUpdate]: newValue} : obj,
+        obj[matchKey] === matchId ? { ...obj, [keyToUpdate]: newValue } : obj,
       );
 
       console.log('✅ Updated Data:', updatedData);
@@ -209,6 +242,35 @@ export default function useFetch({
     console.log('Deleted Item with ID:', id);
   };
 
+  // ====== Return Values
+  const state = {
+    // state
+    data,
+    error,
+    page,
+    hasNextPage,
+    totalResults,
+    isFetching,
+    isRefreshing,
+    isFetchingMore,
+
+    // setters
+    setData: _setData,
+    setError,
+    setPage,
+    setHasNextPage,
+    setTotalResults,
+    setIsFetching,
+    setIsRefreshing,
+    setIsFetchingMore,
+  }
+
+  const queries = {
+    fetchData,
+    refetchData,
+    fetchNextPage,
+  };
+
   const mutations = {
     addNewData,
     updateExistingData,
@@ -217,29 +279,8 @@ export default function useFetch({
   };
 
   return [
-    {
-      data,
-      error,
-      page,
-      hasNextPage,
-      totalResults,
-      isFetching,
-      isRefreshing,
-      isFetchingMore,
-    },
-    {
-      setData: _setData,
-      setError,
-      setPage,
-      setHasNextPage,
-      setTotalResults,
-      setIsFetching,
-      setIsRefreshing,
-      setIsFetchingMore,
-      fetchData,
-      refetchData,
-      fetchNextPage,
-    },
+    state,
+    queries,
     mutations,
   ];
 }

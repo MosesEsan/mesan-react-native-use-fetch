@@ -31,8 +31,8 @@ function useFetch({ initialData = [], serviceFn, dataExtractor, onError, shouldF
         else
             fetchData();
     }, []);
-    const _setData = (newData) => {
-        setData(newData);
+    const _setData = (incoming) => {
+        setData(prev => typeof incoming === 'function' ? incoming(prev) : incoming);
         setIsFetching(false);
         setIsRefreshing(false);
         setIsFetchingMore(false);
@@ -93,7 +93,7 @@ function useFetch({ initialData = [], serviceFn, dataExtractor, onError, shouldF
     // 2. Fetch Next Page
     function fetchNextPage() {
         return __awaiter(this, void 0, void 0, function* () {
-            if (hasNextPage) {
+            if (hasNextPage && !isFetchingMore && !isFetching) {
                 setIsFetchingMore(true);
                 yield fetchData(false, page + 1, true);
             }
@@ -102,8 +102,7 @@ function useFetch({ initialData = [], serviceFn, dataExtractor, onError, shouldF
     // === CRUD / Mutations
     // 3. Add New Data
     const addNewData = (newData) => {
-        setData((prevData) => [newData, ...prevData]);
-        console.log('New Data Added:', newData);
+        _setData((prevData) => [newData, ...prevData]);
     };
     // 4. Update Existing Data
     const updateExistingData = (id, newData) => {
@@ -134,6 +133,32 @@ function useFetch({ initialData = [], serviceFn, dataExtractor, onError, shouldF
         setData((prevData) => prevData.filter((obj) => obj.id !== id));
         console.log('Deleted Item with ID:', id);
     };
+    // ====== Return Values
+    const state = {
+        // state
+        data,
+        error,
+        page,
+        hasNextPage,
+        totalResults,
+        isFetching,
+        isRefreshing,
+        isFetchingMore,
+        // setters
+        setData: _setData,
+        setError,
+        setPage,
+        setHasNextPage,
+        setTotalResults,
+        setIsFetching,
+        setIsRefreshing,
+        setIsFetchingMore,
+    };
+    const queries = {
+        fetchData,
+        refetchData,
+        fetchNextPage,
+    };
     const mutations = {
         addNewData,
         updateExistingData,
@@ -141,29 +166,8 @@ function useFetch({ initialData = [], serviceFn, dataExtractor, onError, shouldF
         deleteExistingData,
     };
     return [
-        {
-            data,
-            error,
-            page,
-            hasNextPage,
-            totalResults,
-            isFetching,
-            isRefreshing,
-            isFetchingMore,
-        },
-        {
-            setData: _setData,
-            setError,
-            setPage,
-            setHasNextPage,
-            setTotalResults,
-            setIsFetching,
-            setIsRefreshing,
-            setIsFetchingMore,
-            fetchData,
-            refetchData,
-            fetchNextPage,
-        },
+        state,
+        queries,
         mutations,
     ];
 }
